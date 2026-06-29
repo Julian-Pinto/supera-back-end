@@ -13,9 +13,12 @@ public class Product {
     private double price;
     private String description;
     private String imageUrl;
+    private int quantity;
+    private String expirationDate;
     private boolean available;
     private String idInvoice;
     private double profitMargin;
+    private double priceWithProfit;
 
     public Product() {
     }
@@ -30,6 +33,22 @@ public class Product {
         this.available = available;
         this.idInvoice = idInvoice;
         this.profitMargin = profitMargin;
+    }
+
+    public int getQuantity() {
+        return quantity;
+    }
+
+    public void setQuantity(int quantity) {
+        this.quantity = quantity;
+    }
+
+    public String getExpirationDate() {
+        return expirationDate;
+    }
+
+    public void setExpirationDate(String expirationDate) {
+        this.expirationDate = expirationDate;
     }
 
     public String getId() {
@@ -102,5 +121,13 @@ public class Product {
 
     public void setProfitMargin(double profitMargin) {
         this.profitMargin = profitMargin;
+    }
+
+    public double getPriceWithProfit() {
+        return priceWithProfit;
+    }
+
+    public void setPriceWithProfit(double priceWithProfit) {
+        this.priceWithProfit = priceWithProfit;
     }
 }

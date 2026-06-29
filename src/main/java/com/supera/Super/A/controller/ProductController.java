@@ -8,6 +8,7 @@ import com.supera.Super.A.service.S3ImageService;
 import com.supera.Super.A.dto.AvailabilityUpdateRequest;
 import com.supera.Super.A.dto.ProductCreateRequest;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -30,8 +31,13 @@ public class ProductController {
     }
 
     @GetMapping
-    public List<Product> getAllProducts() {
+    public List<com.supera.Super.A.dto.ProductResponse> getAllProducts() {
         return productService.findAll();
+    }
+
+    @GetMapping("/admin")
+    public List<com.supera.Super.A.model.Product> getAllProductsAdmin() {
+        return productService.findAllAdmin();
     }
 
     @GetMapping("/{id}")
@@ -41,29 +47,38 @@ public class ProductController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @PostMapping
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> createProduct(
             @RequestParam("name") String name,
             @RequestParam("category") String category,
             @RequestParam("price") double price,
             @RequestParam("description") String description,
             @RequestParam(value = "image", required = false) MultipartFile image,
+            @RequestParam(value = "imageName", required = false) String imageName,
             @RequestParam("available") boolean available,
             @RequestParam(value = "idInvoice", required = false) String idInvoice,
-            @RequestParam(value = "profitMargin", defaultValue = "0") double profitMargin) {
+            @RequestParam(value = "profitMargin", defaultValue = "0") double profitMargin,
+            @RequestParam(value = "quantity", defaultValue = "0") int quantity,
+            @RequestParam(value = "expirationDate", required = false) String expirationDate) {
         try {
             Product product = new Product();
             product.setName(name);
             product.setCategory(category);
             product.setPrice(price);
             product.setDescription(description);
+            product.setQuantity(quantity);
+            product.setExpirationDate(expirationDate);
             product.setAvailable(available);
             product.setIdInvoice(idInvoice);
             product.setProfitMargin(profitMargin);
+            double priceWithProfit = price + (price * profitMargin / 100.0);
+            product.setPriceWithProfit(priceWithProfit);
 
             if (image != null && !image.isEmpty()) {
-                String imageUrl = s3ImageService.uploadImage(image);
+                String imageUrl = s3ImageService.uploadImageUrl(image);
                 product.setImageUrl(imageUrl);
+            } else if (imageName != null && !imageName.isBlank()) {
+                product.setImageUrl(s3ImageService.getImageUrl(imageName));
             }
 
             Product saved = productService.save(product);
@@ -104,7 +119,7 @@ public class ProductController {
                 : ResponseEntity.notFound().build();
     }
 
-    @PutMapping("/{id}")
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> updateProduct(
             @PathVariable String id,
             @RequestParam(value = "name", required = false) String name,
@@ -112,9 +127,12 @@ public class ProductController {
             @RequestParam(value = "price", required = false) Double price,
             @RequestParam(value = "description", required = false) String description,
             @RequestParam(value = "image", required = false) MultipartFile image,
+            @RequestParam(value = "imageName", required = false) String imageName,
             @RequestParam(value = "available", required = false) Boolean available,
             @RequestParam(value = "idInvoice", required = false) String idInvoice,
-            @RequestParam(value = "profitMargin", required = false) Double profitMargin) {
+            @RequestParam(value = "profitMargin", required = false) Double profitMargin,
+            @RequestParam(value = "quantity", required = false) Integer quantity,
+            @RequestParam(value = "expirationDate", required = false) String expirationDate) {
         try {
             return productService.findById(id)
                     .map(existingProduct -> {
@@ -122,14 +140,22 @@ public class ProductController {
                         if (category != null) existingProduct.setCategory(category);
                         if (price != null) existingProduct.setPrice(price);
                         if (description != null) existingProduct.setDescription(description);
+                        if (quantity != null) existingProduct.setQuantity(quantity);
+                        if (expirationDate != null) existingProduct.setExpirationDate(expirationDate);
                         if (available != null) existingProduct.setAvailable(available);
                         if (idInvoice != null) existingProduct.setIdInvoice(idInvoice);
                         if (profitMargin != null) existingProduct.setProfitMargin(profitMargin);
 
+                        // Recompute priceWithProfit whenever price or profitMargin change
+                        existingProduct.setPriceWithProfit(
+                            existingProduct.getPrice() + (existingProduct.getPrice() * existingProduct.getProfitMargin() / 100.0)
+                        );
+
+
                         if (image != null && !image.isEmpty()) {
                             try {
                                 String oldImageUrl = existingProduct.getImageUrl();
-                                String newImageUrl = s3ImageService.uploadImage(image);
+                                String newImageUrl = s3ImageService.uploadImageUrl(image);
                                 existingProduct.setImageUrl(newImageUrl);
                                 
                                 if (oldImageUrl != null && !oldImageUrl.isEmpty()) {
@@ -139,6 +165,8 @@ public class ProductController {
                                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                                         .body("Error al procesar la imagen: " + e.getMessage());
                             }
+                        } else if (imageName != null && !imageName.isBlank()) {
+                            existingProduct.setImageUrl(s3ImageService.getImageUrl(imageName));
                         }
 
                         Product updated = productService.save(existingProduct);

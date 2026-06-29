@@ -1,6 +1,7 @@
 package com.supera.Super.A.service;
 
 import com.supera.Super.A.model.Product;
+import com.supera.Super.A.dto.ProductResponse;
 import com.supera.Super.A.repository.ProductRepository;
 import org.springframework.stereotype.Service;
 
@@ -16,7 +17,22 @@ public class ProductService {
         this.productRepository = productRepository;
     }
 
-    public List<Product> findAll() {
+    public List<ProductResponse> findAll() {
+        return productRepository.findAll().stream().map(p -> new ProductResponse(
+                p.getId(),
+                p.getName(),
+                p.getCategory(),
+                p.getDescription(),
+                p.getImageUrl(),
+                p.isAvailable(),
+                p.getIdInvoice(),
+                p.getQuantity(),
+                p.getPriceWithProfit()
+        )).toList();
+    }
+
+    // Admin: return full product entities with all fields
+    public List<Product> findAllAdmin() {
         return productRepository.findAll();
     }
 
@@ -36,6 +52,10 @@ public class ProductService {
                             existing.setPrice(product.getPrice());
                             existing.setDescription(product.getDescription());
                             existing.setImageUrl(product.getImageUrl());
+                            existing.setQuantity(product.getQuantity());
+                            existing.setExpirationDate(product.getExpirationDate());
+                            // compute priceWithProfit from provided price and profitMargin
+                            existing.setPriceWithProfit(product.getPrice() + (product.getPrice() * product.getProfitMargin() / 100.0));
                             existing.setAvailable(product.isAvailable());
                             existing.setIdInvoice(product.getIdInvoice());
                             existing.setProfitMargin(product.getProfitMargin());

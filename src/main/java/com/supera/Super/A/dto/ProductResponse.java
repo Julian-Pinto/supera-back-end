@@ -1,18 +1,38 @@
 package com.supera.Super.A.dto;
 
-import org.springframework.web.multipart.MultipartFile;
-
-public class ProductCreateRequest {
+public class ProductResponse {
+    private String id;
     private String name;
     private String category;
-    private double price;
     private String description;
-    private MultipartFile image;
+    private String imageUrl;
     private boolean available;
     private String idInvoice;
-    private double profitMargin;
     private int quantity;
-    private String expirationDate;
+    private double priceWithProfit;
+
+    public ProductResponse() {
+    }
+
+    public ProductResponse(String id, String name, String category, String description, String imageUrl, boolean available, String idInvoice, int quantity, double priceWithProfit) {
+        this.id = id;
+        this.name = name;
+        this.category = category;
+        this.description = description;
+        this.imageUrl = imageUrl;
+        this.available = available;
+        this.idInvoice = idInvoice;
+        this.quantity = quantity;
+        this.priceWithProfit = priceWithProfit;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
 
     public String getName() {
         return name;
@@ -30,14 +50,6 @@ public class ProductCreateRequest {
         this.category = category;
     }
 
-    public double getPrice() {
-        return price;
-    }
-
-    public void setPrice(double price) {
-        this.price = price;
-    }
-
     public String getDescription() {
         return description;
     }
@@ -46,12 +58,12 @@ public class ProductCreateRequest {
         this.description = description;
     }
 
-    public MultipartFile getImage() {
-        return image;
+    public String getImageUrl() {
+        return imageUrl;
     }
 
-    public void setImage(MultipartFile image) {
-        this.image = image;
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
     }
 
     public boolean isAvailable() {
@@ -70,14 +82,6 @@ public class ProductCreateRequest {
         this.idInvoice = idInvoice;
     }
 
-    public double getProfitMargin() {
-        return profitMargin;
-    }
-
-    public void setProfitMargin(double profitMargin) {
-        this.profitMargin = profitMargin;
-    }
-
     public int getQuantity() {
         return quantity;
     }
@@ -86,11 +90,11 @@ public class ProductCreateRequest {
         this.quantity = quantity;
     }
 
-    public String getExpirationDate() {
-        return expirationDate;
+    public double getPriceWithProfit() {
+        return priceWithProfit;
     }
 
-    public void setExpirationDate(String expirationDate) {
-        this.expirationDate = expirationDate;
+    public void setPriceWithProfit(double priceWithProfit) {
+        this.priceWithProfit = priceWithProfit;
     }
 }

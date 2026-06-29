@@ -11,6 +11,7 @@ public class AwsS3Config {
     private String accessKey;
     private String secretKey;
     private String cloudFrontUrl;
+    private String cloudFrontDistributionId;
 
     public String getBucket() {
         return bucket;
@@ -50,5 +51,13 @@ public class AwsS3Config {
 
     public void setCloudFrontUrl(String cloudFrontUrl) {
         this.cloudFrontUrl = cloudFrontUrl;
+    }
+
+    public String getCloudFrontDistributionId() {
+        return cloudFrontDistributionId;
+    }
+
+    public void setCloudFrontDistributionId(String cloudFrontDistributionId) {
+        this.cloudFrontDistributionId = cloudFrontDistributionId;
     }
 }
