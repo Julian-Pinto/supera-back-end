@@ -10,6 +10,7 @@ public class AwsS3Config {
     private String region;
     private String accessKey;
     private String secretKey;
+    private String profile;
     private String cloudFrontUrl;
     private String cloudFrontDistributionId;
 
@@ -43,6 +44,14 @@ public class AwsS3Config {
 
     public void setSecretKey(String secretKey) {
         this.secretKey = secretKey;
+    }
+
+    public String getProfile() {
+        return profile;
+    }
+
+    public void setProfile(String profile) {
+        this.profile = profile;
     }
 
     public String getCloudFrontUrl() {
