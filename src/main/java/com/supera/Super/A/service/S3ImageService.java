@@ -145,13 +145,21 @@ public class S3ImageService {
 
     private String generateFileName(MultipartFile file) {
         String originalFileName = file.getOriginalFilename();
-        String extension = "";
-        
-        if (originalFileName != null && originalFileName.contains(".")) {
-            extension = originalFileName.substring(originalFileName.lastIndexOf("."));
+        String fileName = null;
+
+        if (originalFileName != null && !originalFileName.isBlank()) {
+            fileName = new java.io.File(originalFileName).getName();
         }
 
-        return "products/" + UUID.randomUUID().toString() + extension;
+        if (fileName == null || fileName.isBlank()) {
+            String extension = "";
+            if (originalFileName != null && originalFileName.contains(".")) {
+                extension = originalFileName.substring(originalFileName.lastIndexOf("."));
+            }
+            fileName = UUID.randomUUID().toString() + extension;
+        }
+
+        return "products/" + fileName;
     }
 
     private String buildImageUrl(String fileName) {

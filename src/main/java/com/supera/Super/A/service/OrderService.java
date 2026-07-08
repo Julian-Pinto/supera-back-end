@@ -13,16 +13,20 @@ import java.util.Optional;
 public class OrderService {
 
     private final OrderRepository orderRepository;
+    private final OrderEmailService orderEmailService;
 
-    public OrderService(OrderRepository orderRepository) {
+    public OrderService(OrderRepository orderRepository, OrderEmailService orderEmailService) {
         this.orderRepository = orderRepository;
+        this.orderEmailService = orderEmailService;
     }
 
     public Order createOrder(Order order) {
         order.setCreateDate(new Date());
         order.setState(OrderState.CREATED);
         order.setTotal(calculateTotal(order));
-        return orderRepository.save(order);
+        Order savedOrder = orderRepository.save(order);
+        orderEmailService.sendOrderConfirmation(savedOrder);
+        return savedOrder;
     }
 
     public List<Order> findAll() {
