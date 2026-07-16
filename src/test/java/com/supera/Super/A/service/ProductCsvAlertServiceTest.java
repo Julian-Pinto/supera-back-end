@@ -37,7 +37,7 @@ class ProductCsvAlertServiceTest {
 
         when(productRepository.findAll()).thenReturn(List.of(product));
 
-        ProductCsvAlertService service = new ProductCsvAlertService(productRepository, mailSender, "alert@test.com");
+        ProductCsvAlertService service = new ProductCsvAlertService(productRepository, mailSender);
 
         Path csvPath = service.exportProductsToCsvAndSendEmail();
 

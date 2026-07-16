@@ -25,17 +25,11 @@ public class ProductCsvAlertService {
     private final JavaMailSender mailSender;
 
     @Value("${alerts.email.recipients:julianpintoramos88@gmail.com}")
-    private String recipients;
+    private String recipients = "julianpintoramos88@gmail.com";
 
     public ProductCsvAlertService(ProductRepository productRepository, JavaMailSender mailSender) {
         this.productRepository = productRepository;
         this.mailSender = mailSender;
-    }
-
-    public ProductCsvAlertService(ProductRepository productRepository, JavaMailSender mailSender, String recipients) {
-        this.productRepository = productRepository;
-        this.mailSender = mailSender;
-        this.recipients = recipients;
     }
 
     public Path exportProductsToCsvAndSendEmail() throws IOException, MessagingException {
@@ -81,8 +75,12 @@ public class ProductCsvAlertService {
         MimeMessage message = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, true, StandardCharsets.UTF_8.name());
 
+        String recipientsValue = (recipients == null || recipients.isBlank())
+                ? "julianpintoramos88@gmail.com"
+                : recipients;
+
         helper.setFrom("noreply@supera.com");
-        helper.setTo(recipients.split(","));
+        helper.setTo(recipientsValue.split(","));
         helper.setSubject("Alertas de productos - CSV");
         helper.setText("Adjunto encontrará el archivo CSV con la información de productos.");
         helper.addAttachment("productos.csv", new FileSystemResource(attachmentPath));
