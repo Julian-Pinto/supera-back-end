@@ -17,8 +17,11 @@ public class OrderEmailService {
 
     private final JavaMailSender mailSender;
 
-    @Value("${spring.mail.username:}")
+    @Value("${spring.mail.username:noreply@supera.com}")
     private String fromEmail;
+
+    @Value("${spring.mail.password:}")
+    private String password;
 
     public OrderEmailService(JavaMailSender mailSender) {
         this.mailSender = mailSender;
@@ -29,12 +32,21 @@ public class OrderEmailService {
             return;
         }
 
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom(fromEmail.isBlank() ? "noreply@supera.com" : fromEmail);
-        message.setTo(DESTINATION_EMAIL);
-        message.setSubject("Nuevo pedido recibido - SuperA");
-        message.setText(buildEmailBody(order));
-        mailSender.send(message);
+        if (fromEmail == null || fromEmail.isBlank() || password == null || password.isBlank()) {
+            return;
+        }
+
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(fromEmail);
+            message.setTo(DESTINATION_EMAIL);
+            message.setSubject("Nuevo pedido recibido - SuperA");
+            message.setText(buildEmailBody(order));
+            mailSender.send(message);
+        } catch (Exception ex) {
+            System.err.println("No se pudo enviar el correo de pedido: " + ex.getMessage());
+            ex.printStackTrace();
+        }
     }
 
     private String buildEmailBody(Order order) {

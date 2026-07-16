@@ -3,10 +3,14 @@ package com.supera.Super.A.controller;
 import com.supera.Super.A.model.Category;
 import com.supera.Super.A.model.Product;
 import com.supera.Super.A.service.CategoryService;
+import com.supera.Super.A.service.ProductCsvAlertService;
 import com.supera.Super.A.service.ProductService;
 import com.supera.Super.A.service.S3ImageService;
 import com.supera.Super.A.dto.AvailabilityUpdateRequest;
+import com.supera.Super.A.dto.BulkStockDecreaseRequest;
 import com.supera.Super.A.dto.ProductCreateRequest;
+import com.supera.Super.A.dto.ProductUpdateRequest;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +20,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.List;
 
+import static java.lang.Math.ceil;
+
 @RestController
 @RequestMapping("/api/products")
 public class ProductController {
@@ -23,11 +29,13 @@ public class ProductController {
     private final ProductService productService;
     private final CategoryService categoryService;
     private final S3ImageService s3ImageService;
+    private final ProductCsvAlertService productCsvAlertService;
 
-    public ProductController(ProductService productService, CategoryService categoryService, S3ImageService s3ImageService) {
+    public ProductController(ProductService productService, CategoryService categoryService, S3ImageService s3ImageService, ProductCsvAlertService productCsvAlertService) {
         this.productService = productService;
         this.categoryService = categoryService;
         this.s3ImageService = s3ImageService;
+        this.productCsvAlertService = productCsvAlertService;
     }
 
     @GetMapping
@@ -71,7 +79,7 @@ public class ProductController {
             product.setAvailable(available);
             product.setIdInvoice(idInvoice);
             product.setProfitMargin(profitMargin);
-            double priceWithProfit = price + (price * profitMargin / 100.0);
+            double priceWithProfit = calculatePriceWithProfit(price, profitMargin);
             product.setPriceWithProfit(priceWithProfit);
 
             if (image != null && !image.isEmpty()) {
@@ -119,7 +127,7 @@ public class ProductController {
                 : ResponseEntity.notFound().build();
     }
 
-    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PutMapping(value = "/{id}", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE, MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<?> updateProduct(
             @PathVariable String id,
             @RequestParam(value = "name", required = false) String name,
@@ -132,32 +140,50 @@ public class ProductController {
             @RequestParam(value = "idInvoice", required = false) String idInvoice,
             @RequestParam(value = "profitMargin", required = false) Double profitMargin,
             @RequestParam(value = "quantity", required = false) Integer quantity,
-            @RequestParam(value = "expirationDate", required = false) String expirationDate) {
+            @RequestParam(value = "expirationDate", required = false) String expirationDate,
+            @RequestBody(required = false) ProductUpdateRequest updateRequest) {
         try {
             return productService.findById(id)
                     .map(existingProduct -> {
+                        ProductUpdateRequest request = updateRequest != null ? updateRequest : new ProductUpdateRequest();
+
                         if (name != null) existingProduct.setName(name);
+                        else if (request.getName() != null) existingProduct.setName(request.getName());
+
                         if (category != null) existingProduct.setCategory(category);
+                        else if (request.getCategory() != null) existingProduct.setCategory(request.getCategory());
+
                         if (price != null) existingProduct.setPrice(price);
+                        else if (request.getPrice() != null) existingProduct.setPrice(request.getPrice());
+
                         if (description != null) existingProduct.setDescription(description);
+                        else if (request.getDescription() != null) existingProduct.setDescription(request.getDescription());
+
                         if (quantity != null) existingProduct.setQuantity(quantity);
+                        else if (request.getQuantity() != null) existingProduct.setQuantity(request.getQuantity());
+
                         if (expirationDate != null) existingProduct.setExpirationDate(expirationDate);
+                        else if (request.getExpirationDate() != null) existingProduct.setExpirationDate(request.getExpirationDate());
+
                         if (available != null) existingProduct.setAvailable(available);
+                        else if (request.getAvailable() != null) existingProduct.setAvailable(request.getAvailable());
+
                         if (idInvoice != null) existingProduct.setIdInvoice(idInvoice);
+                        else if (request.getIdInvoice() != null) existingProduct.setIdInvoice(request.getIdInvoice());
+
                         if (profitMargin != null) existingProduct.setProfitMargin(profitMargin);
+                        else if (request.getProfitMargin() != null) existingProduct.setProfitMargin(request.getProfitMargin());
 
-                        // Recompute priceWithProfit whenever price or profitMargin change
                         existingProduct.setPriceWithProfit(
-                            existingProduct.getPrice() + (existingProduct.getPrice() * existingProduct.getProfitMargin() / 100.0)
+                            calculatePriceWithProfit(existingProduct.getPrice(), existingProduct.getProfitMargin())
                         );
-
 
                         if (image != null && !image.isEmpty()) {
                             try {
                                 String oldImageUrl = existingProduct.getImageUrl();
                                 String newImageUrl = s3ImageService.uploadImageUrl(image);
                                 existingProduct.setImageUrl(newImageUrl);
-                                
+
                                 if (oldImageUrl != null && !oldImageUrl.isEmpty()) {
                                     s3ImageService.deleteImage(oldImageUrl);
                                 }
@@ -179,11 +205,33 @@ public class ProductController {
         }
     }
 
+    private double calculatePriceWithProfit(double basePrice, double profitMargin) {
+        double calculatedPrice = basePrice + (basePrice * profitMargin / 100.0);
+        return ceil(calculatedPrice / 100.0) * 100.0;
+    }
+
     @PatchMapping("/{id}/availability")
     public ResponseEntity<Product> updateAvailability(@PathVariable String id,
                                                       @RequestBody AvailabilityUpdateRequest request) {
         return productService.updateAvailability(id, request.isAvailable())
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/bulk-decrease-stock")
+    public ResponseEntity<Void> decreaseStockInBatch(@Valid @RequestBody List<BulkStockDecreaseRequest> requests) {
+        productService.decreaseStockInBatch(requests);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/alerts/export-csv")
+    public ResponseEntity<?> exportProductsCsvAndSendEmail() {
+        try {
+            productCsvAlertService.exportProductsToCsvAndSendEmail();
+            return ResponseEntity.noContent().build();
+        } catch (Exception ex) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("No se pudo generar o enviar el CSV: " + ex.getMessage());
+        }
     }
 }

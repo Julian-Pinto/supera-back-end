@@ -1,10 +1,12 @@
 package com.supera.Super.A.service;
 
+import com.supera.Super.A.dto.BulkStockDecreaseRequest;
 import com.supera.Super.A.model.Product;
 import com.supera.Super.A.dto.ProductResponse;
 import com.supera.Super.A.repository.ProductRepository;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -79,6 +81,45 @@ public class ProductService {
                     product.setAvailable(available);
                     return productRepository.save(product);
                 });
+    }
+
+    public List<Product> decreaseStockInBatch(List<BulkStockDecreaseRequest> requests) {
+        if (requests == null || requests.isEmpty()) {
+            throw new IllegalArgumentException("La lista de productos no puede estar vacía");
+        }
+
+        List<String> productIds = requests.stream()
+                .map(BulkStockDecreaseRequest::getProductId)
+                .toList();
+
+        List<Product> products = new ArrayList<>(productRepository.findAllById(productIds));
+
+        if (products.size() != productIds.size()) {
+            throw new IllegalArgumentException("Uno o más productId no existen");
+        }
+
+        for (BulkStockDecreaseRequest request : requests) {
+            Product product = products.stream()
+                    .filter(item -> request.getProductId().equals(item.getId()))
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado: " + request.getProductId()));
+
+            if (request.getQuantityToSubtract() <= 0) {
+                throw new IllegalArgumentException("quantityToSubtract debe ser mayor que 0");
+            }
+
+            int currentQuantity = product.getQuantity();
+            if (currentQuantity < request.getQuantityToSubtract()) {
+                throw new IllegalArgumentException("Stock insuficiente para el producto: " + request.getProductId());
+            }
+
+            int updatedQuantity = currentQuantity - request.getQuantityToSubtract();
+            product.setQuantity(updatedQuantity);
+            product.setAvailable(updatedQuantity > 0);
+            productRepository.save(product);
+        }
+
+        return products;
     }
 
 }
